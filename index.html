@@ -2,152 +2,489 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ponto Inteligente OCR & GPS</title>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-    <style>
-        :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --bg: #f1f5f9; --text: #1e293b; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 100%; max-width: 450px; margin-bottom: 20px; }
-        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
-        input { padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; box-sizing: border-box; text-align: center; font-weight: bold; }
-        button { cursor: pointer; padding: 14px; border-radius: 8px; border: none; font-weight: bold; transition: 0.3s; width: 100%; }
-        .btn-main { background: var(--primary); color: white; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-save { background: var(--text); color: white; margin-top: 15px; }
-        .status-box { margin-top: 10px; font-size: 0.85rem; padding: 10px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; }
-        #preview { max-width: 100%; border-radius: 10px; margin-top: 15px; display: none; border: 1px solid #ddd; }
-        .history-grid { width: 100%; max-width: 450px; display: flex; flex-direction: column; gap: 10px; }
-        .day-card { background: white; padding: 15px; border-radius: 10px; border-left: 6px solid var(--primary); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .map-link { color: var(--primary); text-decoration: none; font-size: 0.8rem; font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Ponto Inteligente OCR & GPS</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+<style>
+
+:root {
+--primary:#2563eb;
+--bg:#f1f5f9;
+--text:#1e293b;
+--extra:#16a34a;
+--falta:#dc2626;
+}
+
+body{
+font-family:'Segoe UI',sans-serif;
+background:var(--bg);
+padding:15px;
+display:flex;
+flex-direction:column;
+align-items:center;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:15px;
+box-shadow:0 10px 15px rgba(0,0,0,0.1);
+width:100%;
+max-width:450px;
+margin-bottom:20px;
+}
+
+.grid-inputs{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+margin-top:15px;
+}
+
+input{
+padding:12px;
+border:1px solid #cbd5e1;
+border-radius:8px;
+text-align:center;
+font-weight:bold;
+}
+
+button{
+cursor:pointer;
+padding:14px;
+border-radius:8px;
+border:none;
+font-weight:bold;
+width:100%;
+}
+
+.btn-main{
+background:var(--primary);
+color:white;
+}
+
+.btn-save{
+background:var(--text);
+color:white;
+margin-top:15px;
+}
+
+.status-box{
+margin-top:10px;
+font-size:0.85rem;
+padding:10px;
+border-radius:8px;
+background:#f8fafc;
+border:1px solid #e2e8f0;
+}
+
+#preview{
+max-width:100%;
+border-radius:10px;
+margin-top:15px;
+display:none;
+border:1px solid #ddd;
+}
+
+.history-grid{
+width:100%;
+max-width:450px;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.day-card{
+background:white;
+padding:15px;
+border-radius:10px;
+border-left:6px solid var(--primary);
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.map-link{
+color:var(--primary);
+font-size:0.8rem;
+font-weight:bold;
+text-decoration:none;
+}
+
+.extra{
+color:var(--extra);
+font-weight:bold;
+}
+
+.falta{
+color:var(--falta);
+font-weight:bold;
+}
+
+</style>
 </head>
+
 <body>
 
-    <div class="card">
-        <h2 style="margin:0 0 15px 0; text-align: center;">⏱️ Ponto OCR + GPS</h2>
-        
-        <button class="btn-main" onclick="document.getElementById('fotoInput').click()">
-            📸 Tirar Foto do Ponto
-        </button>
-        <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none" onchange="processarPonto(this)">
+<div class="card">
 
-        <div class="status-box">
-            <div id="ocrStatus">⚪ Aguardando foto...</div>
-            <div id="gpsStatus">⚪ Localização: Verificando...</div>
-        </div>
+<h2 style="text-align:center">⏱️ Ponto OCR + GPS</h2>
 
-        <div class="grid-inputs">
-            <div><label><small>Entrada</small></label><input type="time" id="entrada"></div>
-            <div><label><small>Saída</small></label><input type="time" id="saida"></div>
-        </div>
+<button class="btn-main"
+onclick="document.getElementById('fotoInput').click()">
 
-        <img id="preview">
-        
-        <button onclick="arquivarDia()" class="btn-save">💾 Arquivar Registro</button>
-    </div>
+📸 Tirar Foto do Ponto
 
-    <div id="historico" class="history-grid"></div>
+</button>
 
-    <script>
-        let base64Image = "";
-        let latLog = "";
+<input
+type="file"
+id="fotoInput"
+accept="image/*"
+capture="environment"
+style="display:none"
+onchange="processarPonto(this)"
+>
 
-        // Tentar capturar localização ao abrir
-        function capturarGPS() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p => {
-                    latLog = `${p.coords.latitude},${p.coords.longitude}`;
-                    document.getElementById('gpsStatus').innerText = "📍 Localização capturada!";
-                }, () => {
-                    document.getElementById('gpsStatus').innerText = "❌ GPS não autorizado.";
-                });
-            }
-        }
-        capturarGPS();
+<div class="status-box">
 
-        async function processarPonto(input) {
-            const file = input.files[0];
-            if (!file) return;
+<div id="ocrStatus">
+⚪ Aguardando foto...
+</div>
 
-            // 1. Mostrar Preview
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async (e) => {
-                base64Image = e.target.result;
-                const p = document.getElementById('preview');
-                p.src = base64Image; p.style.display = 'block';
+<div id="gpsStatus">
+⚪ Localização: Verificando...
+</div>
 
-                // 2. Iniciar OCR
-                document.getElementById('ocrStatus').innerText = "🔍 Lendo imagem (OCR)...";
-                try {
-                    const { data: { text } } = await Tesseract.recognize(file, 'eng');
-                    console.log("Texto detectado:", text);
+</div>
 
-                    // Regex para capturar HH:MM
-                    const match = text.match(/([01]?[0-9]|2[0-3])[:h][0-5][0-9]/);
-                    
-                    if (match) {
-                        const horaEncontrada = match[0].replace('h', ':');
-                        const inputEntrada = document.getElementById('entrada');
-                        const inputSaida = document.getElementById('saida');
+<div class="grid-inputs">
 
-                        if (!inputEntrada.value) {
-                            inputEntrada.value = horaEncontrada;
-                        } else {
-                            inputSaida.value = horaEncontrada;
-                        }
-                        document.getElementById('ocrStatus').innerText = `✅ Lido: ${horaEncontrada}`;
-                    } else {
-                        document.getElementById('ocrStatus').innerText = "⚠️ Horário não identificado.";
-                    }
-                } catch (err) {
-                    document.getElementById('ocrStatus').innerText = "❌ Erro ao ler imagem.";
-                }
-                capturarGPS(); // Tenta atualizar o GPS no momento da foto
-            };
-        }
+<div>
+<label><small>Entrada</small></label>
+<input type="time" id="entrada">
+</div>
 
-        function arquivarDia() {
-            const ent = document.getElementById('entrada').value;
-            const sai = document.getElementById('saida').value;
-            if (!ent || !sai) return alert("Preencha Entrada e Saída!");
+<div>
+<label><small>Saída</small></label>
+<input type="time" id="saida">
+</div>
 
-            const registro = {
-                data: new Date().toLocaleDateString('pt-BR'),
-                entrada: ent,
-                saida: sai,
-                gps: latLog,
-                foto: base64Image
-            };
+</div>
 
-            let banco = JSON.parse(localStorage.getItem('ponto_db') || '[]');
-            banco.push(registro);
-            localStorage.setItem('ponto_db', JSON.stringify(banco));
-            
-            // Limpar campos e recarregar
-            location.reload(); 
-        }
+<img id="preview">
 
-        function carregarHistorico() {
-            const banco = JSON.parse(localStorage.getItem('ponto_db') || '[]');
-            const container = document.getElementById('historico');
-            
-            banco.slice().reverse().forEach(dia => {
-                const linkMaps = dia.gps ? `https://www.google.com/maps?q=${dia.gps}` : '#';
-                container.innerHTML += `
-                    <div class="day-card">
-                        <div>
-                            <strong>${dia.data}</strong><br>
-                            <small>${dia.entrada} ➔ ${dia.saida}</small><br>
-                            ${dia.gps ? `<a href="${linkMaps}" target="_blank" class="map-link">Ver Localização</a>` : ''}
-                        </div>
-                        <img src="${dia.foto}" style="width:50px; height:50px; border-radius:5px; object-fit:cover" onclick="window.open(this.src)">
-                    </div>
-                `;
-            });
-        }
-        carregarHistorico();
-    </script>
+<button onclick="arquivarDia()" class="btn-save">
+💾 Arquivar Registro
+</button>
+
+</div>
+
+
+<div id="historico" class="history-grid"></div>
+
+
+<script>
+
+let base64Image="";
+let latLog="";
+let dataOCR="";
+
+
+/* GPS */
+
+function capturarGPS(){
+
+navigator.geolocation.getCurrentPosition(
+
+p=>{
+latLog=`${p.coords.latitude},${p.coords.longitude}`;
+document.getElementById('gpsStatus').innerText=
+"📍 Localização capturada!";
+},
+
+()=>{
+document.getElementById('gpsStatus').innerText=
+"❌ GPS não autorizado.";
+});
+
+}
+
+capturarGPS();
+
+
+
+/* DATA OCR */
+
+function extrairDataOCR(texto){
+
+const regex=/([0-3]?\d)[\/\-.]([01]?\d)[\/\-.](20\d{2})/;
+
+const match=texto.match(regex);
+
+if(match){
+
+let d=match[1].padStart(2,'0');
+let m=match[2].padStart(2,'0');
+let a=match[3];
+
+return `${d}/${m}/${a}`;
+
+}
+
+return "";
+}
+
+
+
+/* CALCULO HORAS */
+
+function calcularHoras(ent, sai){
+
+let [h1,m1]=ent.split(":");
+let [h2,m2]=sai.split(":");
+
+let minutos1=(h1*60)+(m1*1);
+let minutos2=(h2*60)+(m2*1);
+
+let total=minutos2-minutos1;
+
+let horas=Math.floor(total/60);
+let min=total%60;
+
+return `${horas}h${min.toString().padStart(2,'0')}`;
+}
+
+
+
+function calcularExtra(ent,sai){
+
+let [h1,m1]=ent.split(":");
+let [h2,m2]=sai.split(":");
+
+let t1=(h1*60)+(m1*1);
+let t2=(h2*60)+(m2*1);
+
+let total=t2-t1;
+
+let extra=total-480;
+
+let sinal=extra>=0?"extra":"falta";
+
+extra=Math.abs(extra);
+
+let h=Math.floor(extra/60);
+let m=extra%60;
+
+return {
+texto:`${h}h${m.toString().padStart(2,'0')}`,
+tipo:sinal
+};
+
+}
+
+
+
+/* OCR */
+
+async function processarPonto(input){
+
+const file=input.files[0];
+if(!file)return;
+
+const reader=new FileReader();
+
+reader.readAsDataURL(file);
+
+reader.onload=async(e)=>{
+
+base64Image=e.target.result;
+
+preview.src=base64Image;
+preview.style.display="block";
+
+document.getElementById('ocrStatus').innerText=
+"🔍 Lendo imagem...";
+
+try{
+
+const {data:{text}}=
+await Tesseract.recognize(file,'eng');
+
+
+dataOCR=extrairDataOCR(text);
+
+
+const match=
+text.match(/([01]?[0-9]|2[0-3])[:h][0-5][0-9]/);
+
+
+if(match){
+
+let hora=
+match[0].replace('h',':');
+
+if(!entrada.value){
+
+entrada.value=hora;
+
+}else{
+
+saida.value=hora;
+
+}
+
+document.getElementById('ocrStatus').innerText=
+`✅ Hora ${hora} | Data ${dataOCR||"Hoje"}`;
+
+}
+
+}catch{
+
+document.getElementById('ocrStatus').innerText=
+"Erro OCR";
+
+}
+
+capturarGPS();
+
+};
+
+}
+
+
+
+/* SALVAR */
+
+function arquivarDia(){
+
+const ent=entrada.value;
+const sai=saida.value;
+
+if(!ent||!sai){
+
+return alert("Preencha Entrada e Saída");
+
+}
+
+const dataFinal=
+dataOCR||
+new Date().toLocaleDateString('pt-BR');
+
+
+const horas=
+calcularHoras(ent,sai);
+
+const extra=
+calcularExtra(ent,sai);
+
+
+const registro={
+
+data:dataFinal,
+
+entrada:ent,
+
+saida:sai,
+
+gps:latLog,
+
+foto:base64Image,
+
+horas:horas,
+
+extra:extra.texto,
+
+tipo:extra.tipo
+
+};
+
+
+
+let banco=
+JSON.parse(localStorage.getItem('ponto_db')||'[]');
+
+banco.push(registro);
+
+localStorage.setItem(
+'ponto_db',
+JSON.stringify(banco)
+);
+
+location.reload();
+
+}
+
+
+
+/* HISTORICO */
+
+function carregarHistorico(){
+
+const banco=
+JSON.parse(localStorage.getItem('ponto_db')||'[]');
+
+banco.reverse().forEach(dia=>{
+
+const linkMaps=
+dia.gps?
+`https://www.google.com/maps?q=${dia.gps}`
+:"#";
+
+
+historico.innerHTML+=`
+
+<div class="day-card">
+
+<div>
+
+<strong>${dia.data}</strong>
+
+<br>
+
+${dia.entrada} ➔ ${dia.saida}
+
+<br>
+
+Total: ${dia.horas}
+
+<br>
+
+<span class="${dia.tipo}">
+${dia.tipo==="extra"?"Extra":"Falta"}:
+${dia.extra}
+</span>
+
+<br>
+
+${dia.gps?
+`<a class="map-link"
+href="${linkMaps}"
+target="_blank">
+Ver Localização
+</a>`:""}
+
+</div>
+
+<img src="${dia.foto}"
+style="width:50px;height:50px;border-radius:5px;object-fit:cover"
+onclick="window.open(this.src)">
+
+</div>
+
+`;
+
+});
+
+}
+
+carregarHistorico();
+
+</script>
+
 </body>
 </html>
