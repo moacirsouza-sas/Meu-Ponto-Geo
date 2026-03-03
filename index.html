@@ -1,52 +1,46 @@
 
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 
 <head>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width">
 
-<title>Ponto Inteligente Cloud</title>
+<title>Ponto Cloud Sync</title>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
 
 body{
-font-family:Segoe UI;
+font-family:Arial;
 background:#f1f5f9;
-padding:15px;
 text-align:center;
+padding:10px;
 }
 
 .card{
+
 background:white;
 padding:20px;
 border-radius:15px;
 max-width:450px;
 margin:auto;
-box-shadow:0 10px 15px rgba(0,0,0,0.1);
+margin-bottom:10px;
+
 }
 
 button{
-padding:14px;
+
 width:100%;
+padding:14px;
 margin-top:8px;
-border:none;
 border-radius:8px;
-font-weight:bold;
+border:none;
 background:#2563eb;
 color:white;
-}
+font-weight:bold;
 
-.painel{
-background:white;
-padding:15px;
-margin-bottom:15px;
-border-radius:10px;
-max-width:450px;
-margin:auto;
 }
 
 </style>
@@ -55,15 +49,12 @@ margin:auto;
 
 <body>
 
-<div class="painel">
+<div class="card">
 
-<h3 id="horas">Horas Hoje: 0</h3>
-
-<h3 id="extra">Extra Hoje: 0</h3>
-
-<h3 id="saldo">Saldo Hoje: 0</h3>
-
-<h3 id="total">Saldo Total: 0</h3>
+<h3 id="horas">Horas Hoje 0</h3>
+<h3 id="extra">Extra Hoje 0</h3>
+<h3 id="saldo">Saldo Hoje 0</h3>
+<h3 id="total">Saldo Total 0</h3>
 
 <div id="gps">
 GPS aguardando
@@ -73,47 +64,48 @@ GPS aguardando
 
 <div class="card">
 
-<h2>Ponto Inteligente</h2>
-
 <button onclick="entrada()">Entrada</button>
 
-<button onclick="saidaAlmoco()">Saída Almoço</button>
+<button onclick="saidaAlmoco()">Saída almoço</button>
 
-<button onclick="voltaAlmoco()">Volta Almoço</button>
+<button onclick="voltaAlmoco()">Volta almoço</button>
 
 <button onclick="saida()">Saída</button>
-
-<button onclick="fotoInput.click()">Foto OCR</button>
-
-<input type="file"
-id="fotoInput"
-accept="image/*"
-capture="environment"
-style="display:none"
-onchange="ocr(this)">
 
 </div>
 
 <script>
 
-let registros=
-JSON.parse(localStorage.getItem("ponto")||"{}")
+const URL_SCRIPT=
+"COLE_LINK_AQUI"
+
+
+
+let registros={}
 
 let hoje=
 new Date().toISOString().slice(0,10)
 
 let gpsAtual=""
 
-if(!registros[hoje])
-registros[hoje]={}
 
 
-
-function salvar(){
+function salvarLocal(){
 
 localStorage.setItem(
-"ponto",
+"pontoSync",
 JSON.stringify(registros)
+)
+
+}
+
+
+
+function carregarLocal(){
+
+registros=
+JSON.parse(
+localStorage.getItem("pontoSync")||"{}"
 )
 
 }
@@ -122,11 +114,14 @@ JSON.stringify(registros)
 
 function entrada(){
 
+if(!registros[hoje])
+registros[hoje]={}
+
 registros[hoje].entrada=new Date()
 
-salvar()
+salvarLocal()
 
-calcular()
+calc()
 
 }
 
@@ -136,9 +131,9 @@ function saidaAlmoco(){
 
 registros[hoje].saidaAlmoco=new Date()
 
-salvar()
+salvarLocal()
 
-calcular()
+calc()
 
 }
 
@@ -148,9 +143,9 @@ function voltaAlmoco(){
 
 registros[hoje].voltaAlmoco=new Date()
 
-salvar()
+salvarLocal()
 
-calcular()
+calc()
 
 }
 
@@ -160,11 +155,11 @@ function saida(){
 
 registros[hoje].saida=new Date()
 
-salvar()
+salvarLocal()
 
-calcular()
+enviar()
 
-enviarGoogle()
+calc()
 
 }
 
@@ -174,8 +169,8 @@ function calcularHoje(){
 
 let d=registros[hoje]
 
-if(!d.entrada||!d.saida)
-return {horas:0,extra:0,saldo:0}
+if(!d || !d.entrada || !d.saida)
+return {h:0,e:0,s:0}
 
 
 let horas=
@@ -184,7 +179,7 @@ let horas=
 
 let intervalo=1
 
-if(d.saidaAlmoco && d.voltaAlmoco){
+if(d.saidaAlmoco&&d.voltaAlmoco){
 
 intervalo=
 (d.voltaAlmoco-d.saidaAlmoco)/3600000
@@ -200,7 +195,7 @@ let extra=Math.max(0,horas-8)
 let saldo=horas-8
 
 
-return {horas,extra,saldo}
+return {h:horas,e:extra,s:saldo}
 
 }
 
@@ -210,25 +205,24 @@ function saldoTotal(){
 
 let total=0
 
+for(let d in registros){
 
-for(let dia in registros){
+let r=registros[d]
 
-let d=registros[dia]
-
-if(!d.entrada||!d.saida)
+if(!r.entrada||!r.saida)
 continue
 
 
 let horas=
-(d.saida-d.entrada)/3600000
+(r.saida-r.entrada)/3600000
 
 
 let intervalo=1
 
-if(d.saidaAlmoco && d.voltaAlmoco){
+if(r.saidaAlmoco&&r.voltaAlmoco){
 
 intervalo=
-(d.voltaAlmoco-d.saidaAlmoco)/3600000
+(r.voltaAlmoco-r.saidaAlmoco)/3600000
 
 }
 
@@ -246,40 +240,92 @@ return total
 
 
 
-function calcular(){
+function calc(){
 
 let r=calcularHoje()
 
 
 horas.innerHTML=
-"Horas Hoje: "+r.horas.toFixed(2)
+"Horas Hoje "+
+r.h.toFixed(2)
 
 
 extra.innerHTML=
-"Extra Hoje: "+r.extra.toFixed(2)
+"Extra Hoje "+
+r.e.toFixed(2)
 
 
 saldo.innerHTML=
-"Saldo Hoje: "+r.saldo.toFixed(2)
+"Saldo Hoje "+
+r.s.toFixed(2)
 
 
 total.innerHTML=
-"Saldo Total: "+
+"Saldo Total "+
 saldoTotal().toFixed(2)
 
 }
 
 
 
-function ocr(input){
+function enviar(){
 
-let file=input.files[0]
+let r=registros[hoje]
 
-if(!file)return
+let c=calcularHoje()
 
-Tesseract.recognize(file,'eng')
 
-.then(r=>console.log(r.data.text))
+fetch(URL_SCRIPT,{
+
+method:"POST",
+
+body:JSON.stringify({
+
+data:hoje,
+entrada:r.entrada,
+saidaAlmoco:r.saidaAlmoco,
+voltaAlmoco:r.voltaAlmoco,
+saida:r.saida,
+horas:c.h,
+extra:c.e,
+saldo:c.s,
+gps:gpsAtual
+
+})
+
+})
+
+}
+
+
+
+function sincronizar(){
+
+fetch(URL_SCRIPT)
+
+.then(r=>r.json())
+
+.then(dados=>{
+
+dados.forEach(l=>{
+
+registros[l[0]]={
+
+entrada:new Date(l[1]),
+saidaAlmoco:new Date(l[2]),
+voltaAlmoco:new Date(l[3]),
+saida:new Date(l[4]),
+gps:l[8]
+
+}
+
+})
+
+salvarLocal()
+
+calc()
+
+})
 
 }
 
@@ -299,58 +345,19 @@ p.coords.latitude+
 gps.innerHTML=
 "GPS "+gpsAtual
 
-registros[hoje].gps=gpsAtual
-
-salvar()
-
 })
 
 }
+
+
+
+carregarLocal()
+
+sincronizar()
 
 gps()
 
-calcular()
-
-
-
-function enviarGoogle(){
-
-let d=registros[hoje]
-
-let r=calcularHoje()
-
-
-fetch("COLE_LINK_SCRIPT",{
-
-method:"POST",
-
-body:JSON.stringify({
-
-data:hoje,
-
-entrada:d.entrada,
-
-saidaAlmoco:d.saidaAlmoco,
-
-voltaAlmoco:d.voltaAlmoco,
-
-saida:d.saida,
-
-horas:r.horas,
-
-extra:r.extra,
-
-saldo:r.saldo,
-
-saldoTotal:saldoTotal(),
-
-gps:gpsAtual
-
-})
-
-})
-
-}
+calc()
 
 </script>
 
