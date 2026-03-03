@@ -1,83 +1,136 @@
 
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Ponto Inteligente</title>
+<title>Ponto Inteligente OCR + GPS</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
 
+:root{
+--primary:#2563eb;
+--bg:#f1f5f9;
+--text:#1e293b;
+--extra:#16a34a;
+--falta:#dc2626;
+}
+
 body{
-font-family:Arial;
-text-align:center;
-background:#f0f0f0;
+font-family:Segoe UI;
+background:var(--bg);
+padding:15px;
+display:flex;
+flex-direction:column;
+align-items:center;
 }
 
 .card{
 background:white;
-margin:15px;
 padding:20px;
-border-radius:12px;
-box-shadow:0px 0px 10px gray;
+border-radius:15px;
+box-shadow:0 10px 15px rgba(0,0,0,0.1);
+width:100%;
+max-width:450px;
+margin-bottom:20px;
 }
 
 button{
-padding:15px;
-margin:5px;
-font-size:18px;
-width:220px;
+cursor:pointer;
+padding:14px;
 border-radius:8px;
 border:none;
-background:#2563eb;
+font-weight:bold;
+width:100%;
+margin-top:8px;
+}
+
+.btn-main{
+background:var(--primary);
 color:white;
 }
 
-h2{
+.btn-save{
+background:var(--text);
+color:white;
+}
+
+.status-box{
 margin-top:10px;
+font-size:0.85rem;
+padding:10px;
+border-radius:8px;
+background:#f8fafc;
+border:1px solid #e2e8f0;
 }
 
-.status{
-font-size:12px;
-color:gray;
+#preview{
+max-width:100%;
+border-radius:10px;
+margin-top:15px;
+display:none;
+border:1px solid #ddd;
 }
 
-.saldoPositivo{
-color:green;
+.history-grid{
+width:100%;
+max-width:450px;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.day-card{
+background:white;
+padding:15px;
+border-radius:10px;
+border-left:6px solid var(--primary);
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.extra{color:var(--extra);font-weight:bold}
+.falta{color:var(--falta);font-weight:bold}
+
+.map-link{
+color:var(--primary);
+font-size:0.8rem;
 font-weight:bold;
+text-decoration:none;
 }
 
-.saldoNegativo{
-color:red;
-font-weight:bold;
+.painel{
+background:white;
+padding:15px;
+border-radius:10px;
+width:100%;
+max-width:450px;
+margin-bottom:15px;
 }
 
 </style>
 
 </head>
 
-
 <body>
 
-
-<h2>Controle de Jornada</h2>
-
-
-
-<div class="card">
+<div class="painel">
 
 <h3 id="horasTrabalhadas">
 Horas Trabalhadas: 0.00
 </h3>
 
 <h3 id="horasExtras">
-Horas Extras: 0.00
+Horas Extras Hoje: 0.00
 </h3>
 
-<h3 id="saldoDia">
+<h3 id="saldo">
 Saldo do Dia: 0.00
 </h3>
 
@@ -85,134 +138,165 @@ Saldo do Dia: 0.00
 Saldo Acumulado: 0.00
 </h3>
 
-
-<div id="statusBackup" class="status">
-Backup ativo
+<div id="gpsPainel">
+GPS: aguardando...
 </div>
 
 </div>
-
-
 
 <div class="card">
 
-<button onclick="registrar('entrada')">
-Entrada
+<h2 style="text-align:center">
+⏱️ Ponto OCR + GPS
+</h2>
+
+<button class="btn-main" onclick="registrarEntrada()">
+Registrar Entrada
 </button>
 
-<button onclick="registrar('saidaAlmoco')">
+<button class="btn-main" onclick="registrarSaidaAlmoco()">
 Saída Almoço
 </button>
 
-<button onclick="registrar('voltaAlmoco')">
+<button class="btn-main" onclick="registrarVoltaAlmoco()">
 Volta Almoço
 </button>
 
-<button onclick="registrar('saida')">
-Saída
+<button class="btn-main" onclick="registrarSaida()">
+Registrar Saída
 </button>
+
+<button class="btn-main"
+onclick="fotoInput.click()">
+📸 Foto do Ponto
+</button>
+
+<input
+type="file"
+id="fotoInput"
+accept="image/*"
+capture="environment"
+style="display:none"
+onchange="processarOCR(this)"
+>
+
+<img id="preview">
 
 </div>
 
-
+<div id="historico" class="history-grid"></div>
 
 <script>
 
+let registros=
+JSON.parse(localStorage.getItem("controleHoras")||"{}")
+
+let base64Image=""
+let gpsAtual=""
+
+const hoje=
+new Date().toISOString().slice(0,10)
 
 
-let registros={}
-
-const jornada=8
-
-const almocoPadrao=1
+if(!registros[hoje])
+registros[hoje]={}
 
 
 
-function hoje(){
+function salvar(){
 
-return new Date().toISOString().slice(0,10)
+localStorage.setItem(
+"controleHoras",
+JSON.stringify(registros)
+)
 
 }
 
 
 
-function registrar(tipo){
+function registrarEntrada(){
 
-let agora=new Date().getTime()
-
-
-if(!registros[hoje()])
-
-registros[hoje()]={}
-
-
-registros[hoje()][tipo]=agora
-
+registros[hoje].entrada=
+new Date()
 
 salvar()
 
-calcular()
+atualizar()
 
 }
 
 
 
+function registrarSaidaAlmoco(){
 
+registros[hoje].saidaAlmoco=
+new Date()
 
-function calcular(){
+salvar()
 
-let d=registros[hoje()]
-
-
-if(!d || !d.entrada){
-
-mostrar(0,0,0)
-
-return
+atualizar()
 
 }
 
 
-let agora=new Date().getTime()
 
-let fim=d.saida || agora
+function registrarVoltaAlmoco(){
+
+registros[hoje].voltaAlmoco=
+new Date()
+
+salvar()
+
+atualizar()
+
+}
 
 
-let trabalho=(fim-d.entrada)/3600000
+
+function registrarSaida(){
+
+registros[hoje].saida=
+new Date()
+
+salvar()
+
+atualizar()
+
+}
 
 
-let intervalo=almocoPadrao
 
+function calcularHoje(){
+
+let d=registros[hoje]
+
+if(!d.entrada||!d.saida)
+return {trabalho:0,extra:0,saldo:0}
+
+
+let trabalho=
+(d.saida-d.entrada)/3600000
+
+
+let intervalo=1
 
 if(d.saidaAlmoco && d.voltaAlmoco){
 
-intervalo=(d.voltaAlmoco-d.saidaAlmoco)/3600000
+intervalo=
+(d.voltaAlmoco-d.saidaAlmoco)/3600000
 
 }
-
 
 trabalho-=intervalo
 
 
-if(trabalho<0)
-trabalho=0
+let extra=Math.max(0,trabalho-8)
 
+let saldo=trabalho-8
 
-
-let extra=0
-
-if(trabalho>jornada)
-
-extra=trabalho-jornada
-
-
-let saldo=trabalho-jornada
-
-
-mostrar(trabalho,extra,saldo)
+return {trabalho,extra,saldo}
 
 }
-
 
 
 
@@ -220,40 +304,30 @@ function calcularSaldoTotal(){
 
 let total=0
 
-
 for(let dia in registros){
 
 let d=registros[dia]
 
-
-if(!d.entrada || !d.saida)
-
+if(!d.entrada||!d.saida)
 continue
 
+let trabalho=
+(d.saida-d.entrada)/3600000
 
-let trabalho=(d.saida-d.entrada)/3600000
-
-
-let intervalo=almocoPadrao
-
+let intervalo=1
 
 if(d.saidaAlmoco && d.voltaAlmoco){
 
-intervalo=(d.voltaAlmoco-d.saidaAlmoco)/3600000
+intervalo=
+(d.voltaAlmoco-d.saidaAlmoco)/3600000
 
 }
-
 
 trabalho-=intervalo
 
-
-let saldo=trabalho-jornada
-
-
-total+=saldo
+total+=trabalho-8
 
 }
-
 
 return total
 
@@ -261,152 +335,175 @@ return total
 
 
 
+function atualizar(){
 
-function mostrar(trabalho,extra,saldo){
+let r=calcularHoje()
 
+horasTrabalhadas.innerHTML=
+"Horas Trabalhadas: "+r.trabalho.toFixed(2)
 
-document.getElementById("horasTrabalhadas").innerHTML=
-"Horas Trabalhadas: "+trabalho.toFixed(2)
+horasExtras.innerHTML=
+"Horas Extras Hoje: "+r.extra.toFixed(2)
 
-
-
-document.getElementById("horasExtras").innerHTML=
-"Horas Extras: "+extra.toFixed(2)
-
-
-
-document.getElementById("saldoDia").innerHTML=
-"Saldo do Dia: "+saldo.toFixed(2)
+saldo.innerHTML=
+"Saldo do Dia: "+r.saldo.toFixed(2)
 
 
-
-let total=calcularSaldoTotal()
-
-
-
-let classe="saldoPositivo"
-
-if(total<0)
-
-classe="saldoNegativo"
-
-
-
-document.getElementById("saldoTotal").innerHTML=
-"Saldo Acumulado: <span class='"+classe+"'>"
-+total.toFixed(2)+
-"</span>"
-
+saldoTotal.innerHTML=
+"Saldo Acumulado: "+
+calcularSaldoTotal().toFixed(2)
 
 }
 
 
 
+function processarOCR(input){
 
-function salvar(){
+let file=input.files[0]
 
-localStorage.setItem(
-
-"controleHoras",
-
-JSON.stringify(registros)
-
-)
+if(!file)return
 
 
-localStorage.setItem(
+let reader=new FileReader()
 
-"controleHorasBackup",
+reader.onload=e=>{
 
-JSON.stringify(registros)
+base64Image=e.target.result
 
-)
+preview.src=base64Image
+preview.style.display="block"
+
+}
+
+reader.readAsDataURL(file)
 
 
-document.getElementById("statusBackup").innerHTML=
-
-"Backup salvo "+new Date().toLocaleTimeString()
+Tesseract.recognize(file,'eng')
+.then(r=>console.log(r.data.text))
 
 }
 
 
 
+function capturarGPS(){
 
-function carregar(){
+navigator.geolocation.getCurrentPosition(
 
+p=>{
 
-let dados=
-
-localStorage.getItem("controleHoras")
-
-
-let backup=
-
-localStorage.getItem("controleHorasBackup")
+gpsAtual=
+p.coords.latitude+
+","+p.coords.longitude
 
 
+gpsPainel.innerHTML=
+"GPS: "+gpsAtual
 
-if(dados)
-
-registros=JSON.parse(dados)
-
-
-else if(backup)
-
-registros=JSON.parse(backup)
-
-
-
-calcular()
-
-}
-
-
-
-
-function backupAutomatico(){
-
-localStorage.setItem(
-
-"controleHorasBackup",
-
-JSON.stringify(registros)
-
-)
-
-
-document.getElementById("statusBackup").innerHTML=
-
-"Backup automático "+new Date().toLocaleTimeString()
-
-}
-
-
-
-
-setInterval(calcular,10000)
-
-setInterval(backupAutomatico,20000)
-
-
-
-window.onbeforeunload=function(){
+registros[hoje].gps=gpsAtual
 
 salvar()
 
+},
+
+()=>{
+
+gpsPainel.innerHTML=
+"GPS bloqueado"
+
+})
+
 }
 
 
 
-carregar()
+function carregarHistorico(){
+
+historico.innerHTML=""
+
+for(let dia in registros){
+
+let d=registros[dia]
+
+if(!d.entrada)
+continue
 
 
+let trabalho=0
+let saldoDia=0
+
+if(d.saida){
+
+let intervalo=1
+
+if(d.saidaAlmoco && d.voltaAlmoco){
+
+intervalo=
+(d.voltaAlmoco-d.saidaAlmoco)/3600000
+
+}
+
+trabalho=
+(d.saida-d.entrada)/3600000
+-intervalo
+
+saldoDia=trabalho-8
+
+}
+
+
+let maps=d.gps?
+`https://www.google.com/maps?q=${d.gps}`
+:"#"
+
+
+historico.innerHTML+=`
+
+<div class="day-card">
+
+<div>
+
+<strong>${dia}</strong>
+
+<br>
+
+Horas ${trabalho.toFixed(2)}
+
+<br>
+
+Saldo ${saldoDia.toFixed(2)}
+
+<br>
+
+${d.gps?
+`<a class="map-link"
+href="${maps}"
+target="_blank">
+Mapa
+</a>`:""}
+
+</div>
+
+</div>
+
+`
+
+}
+
+}
+
+
+
+capturarGPS()
+
+atualizar()
+
+carregarHistorico()
 
 </script>
 
 </body>
-
 </html>
+
 
 
 
