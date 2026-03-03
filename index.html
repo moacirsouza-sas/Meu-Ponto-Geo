@@ -7,111 +7,46 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Ponto Inteligente OCR + GPS</title>
+<title>Ponto Inteligente Cloud</title>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
 
-:root{
---primary:#2563eb;
---bg:#f1f5f9;
---text:#1e293b;
---extra:#16a34a;
---falta:#dc2626;
-}
-
 body{
 font-family:Segoe UI;
-background:var(--bg);
+background:#f1f5f9;
 padding:15px;
-display:flex;
-flex-direction:column;
-align-items:center;
+text-align:center;
 }
 
 .card{
 background:white;
 padding:20px;
 border-radius:15px;
-box-shadow:0 10px 15px rgba(0,0,0,0.1);
-width:100%;
 max-width:450px;
-margin-bottom:20px;
+margin:auto;
+box-shadow:0 10px 15px rgba(0,0,0,0.1);
 }
 
 button{
-cursor:pointer;
 padding:14px;
-border-radius:8px;
-border:none;
-font-weight:bold;
 width:100%;
 margin-top:8px;
-}
-
-.btn-main{
-background:var(--primary);
-color:white;
-}
-
-.btn-save{
-background:var(--text);
-color:white;
-}
-
-.status-box{
-margin-top:10px;
-font-size:0.85rem;
-padding:10px;
+border:none;
 border-radius:8px;
-background:#f8fafc;
-border:1px solid #e2e8f0;
-}
-
-#preview{
-max-width:100%;
-border-radius:10px;
-margin-top:15px;
-display:none;
-border:1px solid #ddd;
-}
-
-.history-grid{
-width:100%;
-max-width:450px;
-display:flex;
-flex-direction:column;
-gap:10px;
-}
-
-.day-card{
-background:white;
-padding:15px;
-border-radius:10px;
-border-left:6px solid var(--primary);
-display:flex;
-justify-content:space-between;
-align-items:center;
-}
-
-.extra{color:var(--extra);font-weight:bold}
-.falta{color:var(--falta);font-weight:bold}
-
-.map-link{
-color:var(--primary);
-font-size:0.8rem;
 font-weight:bold;
-text-decoration:none;
+background:#2563eb;
+color:white;
 }
 
 .painel{
 background:white;
 padding:15px;
-border-radius:10px;
-width:100%;
-max-width:450px;
 margin-bottom:15px;
+border-radius:10px;
+max-width:450px;
+margin:auto;
 }
 
 </style>
@@ -122,81 +57,52 @@ margin-bottom:15px;
 
 <div class="painel">
 
-<h3 id="horasTrabalhadas">
-Horas Trabalhadas: 0.00
-</h3>
+<h3 id="horas">Horas Hoje: 0</h3>
 
-<h3 id="horasExtras">
-Horas Extras Hoje: 0.00
-</h3>
+<h3 id="extra">Extra Hoje: 0</h3>
 
-<h3 id="saldo">
-Saldo do Dia: 0.00
-</h3>
+<h3 id="saldo">Saldo Hoje: 0</h3>
 
-<h3 id="saldoTotal">
-Saldo Acumulado: 0.00
-</h3>
+<h3 id="total">Saldo Total: 0</h3>
 
-<div id="gpsPainel">
-GPS: aguardando...
+<div id="gps">
+GPS aguardando
 </div>
 
 </div>
 
 <div class="card">
 
-<h2 style="text-align:center">
-⏱️ Ponto OCR + GPS
-</h2>
+<h2>Ponto Inteligente</h2>
 
-<button class="btn-main" onclick="registrarEntrada()">
-Registrar Entrada
-</button>
+<button onclick="entrada()">Entrada</button>
 
-<button class="btn-main" onclick="registrarSaidaAlmoco()">
-Saída Almoço
-</button>
+<button onclick="saidaAlmoco()">Saída Almoço</button>
 
-<button class="btn-main" onclick="registrarVoltaAlmoco()">
-Volta Almoço
-</button>
+<button onclick="voltaAlmoco()">Volta Almoço</button>
 
-<button class="btn-main" onclick="registrarSaida()">
-Registrar Saída
-</button>
+<button onclick="saida()">Saída</button>
 
-<button class="btn-main"
-onclick="fotoInput.click()">
-📸 Foto do Ponto
-</button>
+<button onclick="fotoInput.click()">Foto OCR</button>
 
-<input
-type="file"
+<input type="file"
 id="fotoInput"
 accept="image/*"
 capture="environment"
 style="display:none"
-onchange="processarOCR(this)"
->
-
-<img id="preview">
+onchange="ocr(this)">
 
 </div>
-
-<div id="historico" class="history-grid"></div>
 
 <script>
 
 let registros=
-JSON.parse(localStorage.getItem("controleHoras")||"{}")
+JSON.parse(localStorage.getItem("ponto")||"{}")
 
-let base64Image=""
-let gpsAtual=""
-
-const hoje=
+let hoje=
 new Date().toISOString().slice(0,10)
 
+let gpsAtual=""
 
 if(!registros[hoje])
 registros[hoje]={}
@@ -206,7 +112,7 @@ registros[hoje]={}
 function salvar(){
 
 localStorage.setItem(
-"controleHoras",
+"ponto",
 JSON.stringify(registros)
 )
 
@@ -214,53 +120,51 @@ JSON.stringify(registros)
 
 
 
-function registrarEntrada(){
+function entrada(){
 
-registros[hoje].entrada=
-new Date()
+registros[hoje].entrada=new Date()
 
 salvar()
 
-atualizar()
+calcular()
 
 }
 
 
 
-function registrarSaidaAlmoco(){
+function saidaAlmoco(){
 
-registros[hoje].saidaAlmoco=
-new Date()
+registros[hoje].saidaAlmoco=new Date()
 
 salvar()
 
-atualizar()
+calcular()
 
 }
 
 
 
-function registrarVoltaAlmoco(){
+function voltaAlmoco(){
 
-registros[hoje].voltaAlmoco=
-new Date()
+registros[hoje].voltaAlmoco=new Date()
 
 salvar()
 
-atualizar()
+calcular()
 
 }
 
 
 
-function registrarSaida(){
+function saida(){
 
-registros[hoje].saida=
-new Date()
+registros[hoje].saida=new Date()
 
 salvar()
 
-atualizar()
+calcular()
+
+enviarGoogle()
 
 }
 
@@ -271,10 +175,10 @@ function calcularHoje(){
 let d=registros[hoje]
 
 if(!d.entrada||!d.saida)
-return {trabalho:0,extra:0,saldo:0}
+return {horas:0,extra:0,saldo:0}
 
 
-let trabalho=
+let horas=
 (d.saida-d.entrada)/3600000
 
 
@@ -287,22 +191,25 @@ intervalo=
 
 }
 
-trabalho-=intervalo
+
+horas-=intervalo
 
 
-let extra=Math.max(0,trabalho-8)
+let extra=Math.max(0,horas-8)
 
-let saldo=trabalho-8
+let saldo=horas-8
 
-return {trabalho,extra,saldo}
+
+return {horas,extra,saldo}
 
 }
 
 
 
-function calcularSaldoTotal(){
+function saldoTotal(){
 
 let total=0
+
 
 for(let dia in registros){
 
@@ -311,8 +218,10 @@ let d=registros[dia]
 if(!d.entrada||!d.saida)
 continue
 
-let trabalho=
+
+let horas=
 (d.saida-d.entrada)/3600000
+
 
 let intervalo=1
 
@@ -323,11 +232,13 @@ intervalo=
 
 }
 
-trabalho-=intervalo
 
-total+=trabalho-8
+horas-=intervalo
+
+total+=horas-8
 
 }
+
 
 return total
 
@@ -335,57 +246,46 @@ return total
 
 
 
-function atualizar(){
+function calcular(){
 
 let r=calcularHoje()
 
-horasTrabalhadas.innerHTML=
-"Horas Trabalhadas: "+r.trabalho.toFixed(2)
 
-horasExtras.innerHTML=
-"Horas Extras Hoje: "+r.extra.toFixed(2)
+horas.innerHTML=
+"Horas Hoje: "+r.horas.toFixed(2)
+
+
+extra.innerHTML=
+"Extra Hoje: "+r.extra.toFixed(2)
+
 
 saldo.innerHTML=
-"Saldo do Dia: "+r.saldo.toFixed(2)
+"Saldo Hoje: "+r.saldo.toFixed(2)
 
 
-saldoTotal.innerHTML=
-"Saldo Acumulado: "+
-calcularSaldoTotal().toFixed(2)
+total.innerHTML=
+"Saldo Total: "+
+saldoTotal().toFixed(2)
 
 }
 
 
 
-function processarOCR(input){
+function ocr(input){
 
 let file=input.files[0]
 
 if(!file)return
 
-
-let reader=new FileReader()
-
-reader.onload=e=>{
-
-base64Image=e.target.result
-
-preview.src=base64Image
-preview.style.display="block"
-
-}
-
-reader.readAsDataURL(file)
-
-
 Tesseract.recognize(file,'eng')
+
 .then(r=>console.log(r.data.text))
 
 }
 
 
 
-function capturarGPS(){
+function gps(){
 
 navigator.geolocation.getCurrentPosition(
 
@@ -396,113 +296,68 @@ p.coords.latitude+
 ","+p.coords.longitude
 
 
-gpsPainel.innerHTML=
-"GPS: "+gpsAtual
+gps.innerHTML=
+"GPS "+gpsAtual
 
 registros[hoje].gps=gpsAtual
 
 salvar()
 
-},
+})
 
-()=>{
+}
 
-gpsPainel.innerHTML=
-"GPS bloqueado"
+gps()
+
+calcular()
+
+
+
+function enviarGoogle(){
+
+let d=registros[hoje]
+
+let r=calcularHoje()
+
+
+fetch("COLE_LINK_SCRIPT",{
+
+method:"POST",
+
+body:JSON.stringify({
+
+data:hoje,
+
+entrada:d.entrada,
+
+saidaAlmoco:d.saidaAlmoco,
+
+voltaAlmoco:d.voltaAlmoco,
+
+saida:d.saida,
+
+horas:r.horas,
+
+extra:r.extra,
+
+saldo:r.saldo,
+
+saldoTotal:saldoTotal(),
+
+gps:gpsAtual
+
+})
 
 })
 
 }
 
-
-
-function carregarHistorico(){
-
-historico.innerHTML=""
-
-for(let dia in registros){
-
-let d=registros[dia]
-
-if(!d.entrada)
-continue
-
-
-let trabalho=0
-let saldoDia=0
-
-if(d.saida){
-
-let intervalo=1
-
-if(d.saidaAlmoco && d.voltaAlmoco){
-
-intervalo=
-(d.voltaAlmoco-d.saidaAlmoco)/3600000
-
-}
-
-trabalho=
-(d.saida-d.entrada)/3600000
--intervalo
-
-saldoDia=trabalho-8
-
-}
-
-
-let maps=d.gps?
-`https://www.google.com/maps?q=${d.gps}`
-:"#"
-
-
-historico.innerHTML+=`
-
-<div class="day-card">
-
-<div>
-
-<strong>${dia}</strong>
-
-<br>
-
-Horas ${trabalho.toFixed(2)}
-
-<br>
-
-Saldo ${saldoDia.toFixed(2)}
-
-<br>
-
-${d.gps?
-`<a class="map-link"
-href="${maps}"
-target="_blank">
-Mapa
-</a>`:""}
-
-</div>
-
-</div>
-
-`
-
-}
-
-}
-
-
-
-capturarGPS()
-
-atualizar()
-
-carregarHistorico()
-
 </script>
 
 </body>
+
 </html>
+
 
 
 
